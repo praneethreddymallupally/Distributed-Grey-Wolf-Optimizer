@@ -1,133 +1,70 @@
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-
-interface DGWO{
-	double[] getminval_index(double[] a);
-	double[] getmaxval_index(double a[]);
-	double[][] sort_and_index(double[][] XXX);
-	void init();
-	double[][] simplebounds(double s[][]);
-	double[][] solution();
-	double output();
-	double[][] migrateBest(int n);
-    void replaceWorst(double[][] migrants);
-    void toStringnew();
-}
-
-abstract class f_xj
-{
-	abstract double fitnessfunction(double x[]);
-}
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
 
 
-class DGWOImpl implements DGWO{
+
+class DGWOImpl implements IDGWO{
 	
 	private int totalNumberOfCandidateSolutions;
 	private double[][] candidateSolutions;
 	private int totalNumberofDimensions;
-	private int[] Lower;
-	private int[] Upper;
+	private double[] Lower;
+	private double[] Upper;
 	private double[] delta;
 	private double[] beta;
 	private double[] alpha;
-	private f_xj iff;
+	private fitnessclass iff;
 	private int counter;
 	private int maxiter;
 	private double[] a;
 	private double[] BESTVAL;
+	private String identity;
 	
-	public DGWOImpl() {
+	public DGWOImpl(int totalNumberOfCandidateSolutions, int numberOfTasks,  fitnessclass iff, int maxiter, double[] Lower, double[] Upper, String identity) {
+		this.totalNumberOfCandidateSolutions = totalNumberOfCandidateSolutions;
+		this.iff = iff;
+		this.maxiter = maxiter;
+		totalNumberofDimensions = numberOfTasks;
+		alpha = new double[totalNumberofDimensions];
+		beta = new double[totalNumberofDimensions];
+		delta = new double[totalNumberofDimensions];
+		counter = 0;
+		a = new double[totalNumberofDimensions];
+		BESTVAL  = new double[maxiter];
+		candidateSolutions = new double[totalNumberOfCandidateSolutions][totalNumberofDimensions];
+		this.Lower = Lower;
+		this.Upper = Upper;
+		this.identity = identity;
+	}
+
+	/* (non-Javadoc)
+	 * @see IDGWO#sortAndIndex(double[][])
+	 */
+	public double[][] sortAndIndex(double[][] XXX) {
 		
+		Comparator<double[]> comparator = new Comparator<double[]>() {
+            public int compare(double[] row1, double[] row2) {
+            	double value1 = iff.fitnessfunction(row1);
+            	double value2 = iff.fitnessfunction(row2);
+                return Double.compare(value1, value2);
+            }
+        };
+        Arrays.sort(XXX,comparator);
+        return XXX;
 	}
 
-	public double[] getminval_index(double[] a) {
-		double m = 0.0;
-	    double b[] = new double[a.length];
-	    for (int i = 0; i < a.length; i++) {
-	        b[i] = a[i];
-	    }
-	    double minval = a[0];
-	    for (int i = 0; i < a.length; i++) {
-	        if (a[i] < minval) {
-	            minval = a[i];
-	        }
-	    }
-	    for (int i = 0; i < a.length; i++) {
-	        if (b[i] == minval) {
-	            m = i;
-	            break;
-	        }
-	    };
-	    double[] dep = new double[2];
-	    dep[0] = minval;
-	    dep[1] = m;
-	    return dep;
-	}
-
-	public double[] getmaxval_index(double[] a) {
-	    double m = 0.0;
-	    double b[] = new double[a.length];
-	    for (int i = 0; i < a.length; i++) {
-	        b[i] = a[i];
-	    }
-	    double maxval = a[0];
-	    for (int j = 0; j < a.length; j++) {
-	        if (a[j] > maxval) {
-	            maxval = a[j];
-	        }
-	    }
-	    for (int i = 0; i < b.length; i++) {
-	        if (b[i] == maxval) {
-	            m = i;
-	            break;
-	        }
-	    }
-	    double dep2[] = new double[2];
-	    dep2[0] = maxval;
-	    dep2[1] = m;
-	    return dep2;
-	}
-
-	public double[][] sort_and_index(double[][] XXX) {
-		double[] yval = new double[totalNumberOfCandidateSolutions];
-	    for (int i = 0; i < totalNumberOfCandidateSolutions; i++) {
-	        yval[i] = iff.fitnessfunction(XXX[i]);
-	    }
-	    ArrayList < Double > nfit = new ArrayList < Double > ();
-	    for (int i = 0; i < totalNumberOfCandidateSolutions; i++) {
-	        nfit.add(yval[i]);
-	    }
-	    ArrayList < Double > nstore = new ArrayList < Double > (nfit);
-	    Collections.sort(nfit);
-	    double[] ret = new double[nfit.size()];
-	    Iterator < Double > iterator = nfit.iterator();
-	    int ii = 0;
-	    while (iterator.hasNext()) {
-	        ret[ii] = iterator.next().doubleValue();
-	        ii++;
-	    }
-	    int[] indexes = new int[nfit.size()];
-	    for (int n = 0; n < nfit.size(); n++) {
-	        indexes[n] = nstore.indexOf(nfit.get(n));
-	    }
-	    double[][] B = new double[totalNumberOfCandidateSolutions][totalNumberofDimensions];
-	    for (int i = 0; i < totalNumberOfCandidateSolutions; i++) {
-	        for (int j = 0; j < totalNumberofDimensions; j++) {
-	            B[i][j] = XXX[indexes[i]][j];
-	        }
-	    }
-
-	    return B;
-	}
-
+	/* (non-Javadoc)
+	 * @see IDGWO#init()
+	 */
 	public void init() {
 		for(int i=0; i<totalNumberOfCandidateSolutions; i++) {
 			for(int j=0; j<totalNumberofDimensions; j++) {
-				candidateSolutions[i][j] = Lower[j] + (Upper[j]- Lower[j])*Math.random();
+				candidateSolutions[i][j] = (double)(Lower[j] + (Upper[j]- Lower[j])*Math.random());	
 			}
 		}
-		candidateSolutions = sort_and_index(candidateSolutions);
+		candidateSolutions = sortAndIndex(candidateSolutions);
 		for(int i=0; i<totalNumberofDimensions; i++) {
 			alpha[i] = candidateSolutions[0][i];
 		}
@@ -137,8 +74,20 @@ class DGWOImpl implements DGWO{
 		for(int i=0; i<totalNumberofDimensions; i++) {
 			delta[i] = candidateSolutions[2][i];
 		}
+		System.out.println("+++++++++++ candidateSolutions +++++++++++");
+		for(int i=0;i<totalNumberOfCandidateSolutions;i++) {
+			for(int j=0; j<totalNumberofDimensions; j++) {
+				System.out.print(candidateSolutions[i][j]);
+				System.out.print(" ");
+			}
+			System.out.println();
+		}
+		System.out.println("+++++++++++ ++++++++++++++++++ +++++++++++");
 	}
 
+	/* (non-Javadoc)
+	 * @see IDGWO#simplebounds(double[][])
+	 */
 	public double[][] simplebounds(double[][] s) {
 		for (int i = 0; i < totalNumberOfCandidateSolutions; i++) {
 	        for (int j = 0; j < totalNumberofDimensions; j++) {
@@ -153,13 +102,20 @@ class DGWOImpl implements DGWO{
 	    return s;
 	}
 
+	/* (non-Javadoc)
+	 * @see IDGWO#solution()
+	 */
 	public double[][] solution() {
+		double previous, after;
 		if (counter == 0) {
 	        init();
 	    }
+		System.out.println("Post Initialization....");
 	    counter++;
 	    int iter = 1;
 	    while (iter < maxiter) {
+	    	double worked=0, unworked=0;
+	    	System.out.println("Iteration: "+iter+"Identity: "+identity);
 	        for (int j = 0; j < totalNumberofDimensions; j++) {
 	            a[j] = 2.0 - ((double) iter * (2.0 / (double) maxiter));
 	        }
@@ -180,8 +136,15 @@ class DGWOImpl implements DGWO{
 
 	                double[][] X1 = new double[totalNumberOfCandidateSolutions][totalNumberofDimensions];
 					X1[i][j] = alpha[j] - A1[j] * (Math.abs(C1[j] * alpha[j] - candidateSolutions[i][j]));
-	                X1 = simplebounds(X1);
-	                
+					previous = X1[i][j];
+					X1 = simplebounds(X1);
+					after = X1[i][j];
+					if (previous-after == 0) {
+						worked+=1;
+					}
+					else {
+						unworked+=1;
+					}
 	                // calculate X2
 	                r1 = Math.random();
 	                r2 = Math.random();
@@ -196,8 +159,15 @@ class DGWOImpl implements DGWO{
 
 	                double[][] X2 = new double[totalNumberOfCandidateSolutions][totalNumberofDimensions];;
 					X2[i][j] = beta[j] - A2[j] * (Math.abs(C2[j] * beta[j] - candidateSolutions[i][j]));
-	                X2 = simplebounds(X2);
-	                
+					previous = X2[i][j];
+					X2 = simplebounds(X2);
+					after = X2[i][j];
+					if (previous-after == 0) {
+						worked+=1;
+					}
+					else {
+						unworked+=1;
+					}
 	                // calculate X3
 	                r1 = Math.random();
 	                r2 = Math.random();
@@ -212,18 +182,25 @@ class DGWOImpl implements DGWO{
 
 	                double[][] X3 = new double[totalNumberOfCandidateSolutions][totalNumberofDimensions];;
 					X3[i][j] = delta[j] - A3[j] * (Math.abs(C3[j] * delta[j] - candidateSolutions[i][j]));
-	                X3 = simplebounds(X3);
-	                
+					previous = X3[i][j];
+					X3 = simplebounds(X3);
+					after = X3[i][j];
+					if (previous-after == 0) {
+						worked+=1;
+					}
+					else {
+						unworked+=1;
+					}
 	                candidateSolutions[i][j] = (X1[i][j] + X2[i][j] + X3[i][j]) / 3.0;
 
 	            }
 	        }
 	        candidateSolutions = simplebounds(candidateSolutions);
-	        candidateSolutions = sort_and_index(candidateSolutions);
+	        candidateSolutions = sortAndIndex(candidateSolutions);
 
-	        for (int i = 0; i < totalNumberofDimensions; i++) {
-	        	candidateSolutions[totalNumberOfCandidateSolutions - 1][i] = candidateSolutions[0][i];
-	        }
+//	        for (int i = 0; i < totalNumberofDimensions; i++) {
+//	        	candidateSolutions[totalNumberOfCandidateSolutions - 1][i] = candidateSolutions[0][i];
+//	        }
 
 	        for (int i = 0; i < totalNumberofDimensions; i++) {
 	            alpha[i] = candidateSolutions[0][i];
@@ -236,8 +213,10 @@ class DGWOImpl implements DGWO{
 	        }
 
 	        BESTVAL[iter] = iff.fitnessfunction(candidateSolutions[0]);
-
+	        
 	        iter++;
+//	        System.out.println("Worked = "+worked);
+//	        System.out.println("Unworked = "+unworked);
 	    }
 
 	    double[][] out = new double[2][totalNumberofDimensions];
@@ -248,8 +227,12 @@ class DGWOImpl implements DGWO{
 	    return out;
 	}
 
+	/* (non-Javadoc)
+	 * @see IDGWO#output()
+	 */
 	public double output() {
 	    double[][] out = solution();
+	    System.out.println("***********************************");
 	    System.out.println("Optimized value = " + out[0][0]);
 	      for(int i=0;i<totalNumberofDimensions;i++){
 	    	  System.out.println("x["+i+"] = "+out[1][i]);
@@ -257,6 +240,9 @@ class DGWOImpl implements DGWO{
 	    return out[0][0];
 	}
 
+	/* (non-Javadoc)
+	 * @see IDGWO#migrateBest(int)
+	 */
 	public double[][] migrateBest(int n) {
 		double migrants[][] = new double[n][totalNumberofDimensions];
 	    for (int i = 0; i < n; i++) {
@@ -267,6 +253,9 @@ class DGWOImpl implements DGWO{
 	    return migrants;
 	}
 
+	/* (non-Javadoc)
+	 * @see IDGWO#replaceWorst(double[][])
+	 */
 	public void replaceWorst(double[][] migrants) {
 		int n = candidateSolutions.length - 1;
 	    int m = migrants.length - 1;
@@ -280,13 +269,25 @@ class DGWOImpl implements DGWO{
 	        c++;
 	    }
 	}
+	public double[] LOV(double[] arr) {
+		double[] arrClone = Arrays.copyOf(arr, arr.length);
+		
+		HashMap < Double, Integer > map = new HashMap <Double, Integer > ();
+		for (int j = 0; j < arr.length; j++) {
+		    map.put(arr[j], j);
+		}
 
-	public void toStringnew() {
-		double[][] in = solution();
-	    System.out.println("Optimized value = " + in[0][0]);
-	    for (int i = 0; i < totalNumberofDimensions; i++) {
-	        System.out.println("x[" + i + "] = " + in[1][i]);
-	    }
+		Arrays.sort(arrClone);
+		
+		double[] phi = new double[arr.length];
+		for (int j = 0; j < arrClone.length; j++) {
+			phi[map.get(arrClone[j])] = j;
+		}
+
+		double[] pi = new double[arr.length];
+		for(int j=0; j< arrClone.length; j++) {
+			pi[(int) phi[j]] = j;
+		}
+		return pi;
 	}
-	
 }
